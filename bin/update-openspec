@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Convenience wrapper to update OpenSpec from source
+# This script finds the OpenSpec project root and runs the update
+
+set -euo pipefail
+
+# Try to find OpenSpec project root from various locations
+find_openspec_root() {
+  # If OPENSPEC_ROOT env var is set, use it
+  if [ -n "${OPENSPEC_ROOT:-}" ]; then
+    echo "$OPENSPEC_ROOT"
+    return 0
+  fi
+
+  # Check current directory and parent directories
+  local current_dir=$(pwd)
+  while [ "$current_dir" != "/" ]; do
+    if [ -f "$current_dir/package.json" ] && grep -q '"name".*"@fission-ai/openspec"' "$current_dir/package.json" 2>/dev/null; then
+      echo "$current_dir"
+      return 0
+    fi
+    current_dir=$(dirname "$current_dir")
+  done
+
+  # Check common locations
+  if [ -d "$HOME/buildspace/luongnv89/OpenSpec" ]; then
+    echo "$HOME/buildspace/luongnv89/OpenSpec"
+    return 0
+  fi
+
+  if [ -d "/Users/montimage/buildspace/luongnv89/OpenSpec" ]; then
+    echo "/Users/montimage/buildspace/luongnv89/OpenSpec"
+    return 0
+  fi
+
+  return 1
+}
+
+OPENSPEC_ROOT=$(find_openspec_root || echo "")
+
+if [ -z "$OPENSPEC_ROOT" ]; then
+  echo "❌ Error: Could not find OpenSpec project root"
+  echo ""
+  echo "Solutions:"
+  echo "  1. Run this command from within the OpenSpec project directory"
+  echo "  2. Set OPENSPEC_ROOT environment variable: export OPENSPEC_ROOT=/path/to/openspec"
+  echo "  3. Create a symlink: ln -s /path/to/openspec ~/OpenSpec"
+  exit 1
+fi
+
+if [ ! -f "$OPENSPEC_ROOT/scripts/update-from-source.sh" ]; then
+  echo "❌ Error: update-from-source.sh not found in $OPENSPEC_ROOT/scripts/"
+  exit 1
+fi
+
+# Run the update script
+exec "$OPENSPEC_ROOT/scripts/update-from-source.sh"
